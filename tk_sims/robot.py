@@ -64,16 +64,23 @@ class CommandWindow(tk.Frame):
     theta1_start = self.robot_win.servo1_theta
     theta2_start = self.robot_win.servo2_theta
 
-    s1_obj = theta1 + 1 if theta1 > theta1_start else theta1 - 1
-    s2_obj = theta2 + 1 if theta2 > theta2_start else theta2 - 1
+    def move_servo1():
+      s1_obj = theta1 + 1 if theta1 > theta1_start else theta1 - 1
 
-    for theta in range(theta1_start, s1_obj, 1 if theta1 > theta1_start else -1):
-      self.robot_win.command_servo1(theta)
-      time.sleep(0.01)
+      for theta in range(theta1_start, s1_obj, 1 if theta1 > theta1_start else -1):
+        self.robot_win.command_servo1(theta)
+        self.robot_win.command_servo2(theta2_start)
+        time.sleep(0.01)
     
-    for theta in range(theta2_start, s2_obj, 1 if theta2 > theta2_start else -1):
-      self.robot_win.command_servo2(theta)
-      time.sleep(0.01)
+    def move_servo2():
+      s2_obj = theta2 + 1 if theta2 > theta2_start else theta2 - 1
+
+      for theta in range(theta2_start, s2_obj, 1 if theta2 > theta2_start else -1):
+        self.robot_win.command_servo2(theta)
+        time.sleep(0.01)
+
+    move_servo1()
+    move_servo2()
 
     self.robot_win.servo1_theta = theta1
     self.robot_win.servo2_theta = theta2
@@ -106,7 +113,12 @@ class RobotSimulation(tk.Frame):
     self.scx2 = self.ab2_coords[0] + self.arm_block2_width/2
     self.scy2 = self.ab2_coords[1]
 
+    self.ab2_mi_diag = m.sqrt(m.pow(self.arm_block2_width/2, 2) + m.pow(self.arm_block2_height, 2))
+    self.ab2_mi_diag_theta = m.atan(self.arm_block2_width/2/self.arm_block2_height)
+    self.ab2h_ab3h = self.arm_block2_height + self.arm_block3_height
+
     self.servo1_theta, self.servo2_theta = 90, 90
+    self.theta_rad1 = m.radians(90)
 
     self.mgi_arm1 = self.char_height + self.arm_block1_height
     self.mgi_arm2 = self.arm_block2_height
@@ -170,18 +182,37 @@ class RobotSimulation(tk.Frame):
     self.scx2 = self.scx1 - self.arm_block2_height * m.cos(self.theta_rad1)
     self.scy2 = self.scy1 - self.arm_block2_height * m.sin(self.theta_rad1)
 
-    ab2_mi_diag = m.sqrt(m.pow(self.arm_block2_width/2, 2) + m.pow(self.arm_block2_height, 2))
-    ab2_mi_diag_theta = m.atan(self.arm_block2_width/2/self.arm_block2_height)
-    x0 = self.scx1 - (ab2_mi_diag * m.cos(self.theta_rad1 - ab2_mi_diag_theta))
-    y0 = self.scy1 - (ab2_mi_diag * m.sin(self.theta_rad1 - ab2_mi_diag_theta))
-    x1 = self.scx1 - (ab2_mi_diag * m.cos(self.theta_rad1 + ab2_mi_diag_theta))
-    y1 = self.scy1 - (ab2_mi_diag * m.sin(self.theta_rad1 + ab2_mi_diag_theta))
+    x0 = self.scx1 - (self.ab2_mi_diag * m.cos(self.theta_rad1 - self.ab2_mi_diag_theta))
+    y0 = self.scy1 - (self.ab2_mi_diag * m.sin(self.theta_rad1 - self.ab2_mi_diag_theta))
+    x1 = self.scx1 - (self.ab2_mi_diag * m.cos(self.theta_rad1 + self.ab2_mi_diag_theta))
+    y1 = self.scy1 - (self.ab2_mi_diag * m.sin(self.theta_rad1 + self.ab2_mi_diag_theta))
     x2 = self.scx1 - self.arm_block2_width/2 * m.cos(self.theta_rad1 + m.pi/2)
     y2 = self.scy1 - self.arm_block2_width/2 * m.sin(self.theta_rad1 + m.pi/2)
     x3 = self.scx1 - self.arm_block2_width/2 * m.cos(self.theta_rad1 - m.pi/2)
     y3 = self.scy1 - self.arm_block2_width/2 * m.sin(self.theta_rad1 - m.pi/2)
     self.win.coords(self.arm_block2, (x0, y0, x1, y1, x2, y2, x3, y3))
     self.ab2_coords = self.win.coords(self.arm_block2)
+  
+  def move_all_from_servo1(self):
+    l0 = m.sqrt(m.pow(40, 2) + m.pow(self.ab2h_ab3h, 2))
+    l1 = m.sqrt(m.pow(20, 2) + m.pow(self.ab2h_ab3h, 2))
+    l2 = m.sqrt(m.pow(20, 2) + m.pow(self.arm_block2_height, 2))
+    l3 = m.sqrt(m.pow(40, 2) + m.pow(self.arm_block2_height, 2))
+    theta0 = self.theta_rad1 - m.atan(40 / self.ab2h_ab3h)
+    theta1 = self.theta_rad1 + m.atan(20 / self.ab2h_ab3h)
+    theta2 = self.theta_rad1 + m.atan(20 / self.arm_block2_height)
+    theta3 = self.theta_rad1 - m.atan(40 / self.arm_block2_height)
+    self.win.coords(self.arm_block3, self.get_new_coords(self.scx1, self.scy1, [l0, l1, l2, l3], [theta0, theta1, theta2, theta3]))
+
+    l0 = m.sqrt(m.pow(40 + self.arm_block4_width, 2) + m.pow(self.ab2h_ab3h, 2))
+    l1 = m.sqrt(m.pow(40, 2) + m.pow(self.ab2h_ab3h, 2))
+    l2 = m.sqrt(m.pow(40, 2) + m.pow(self.ab2h_ab3h - self.arm_block4_height, 2))
+    l3 = m.sqrt(m.pow(40 + self.arm_block4_width, 2) + m.pow(self.ab2h_ab3h - self.arm_block4_height, 2))
+    theta0 = self.theta_rad1 - m.atan((40 + self.arm_block4_width) / self.ab2h_ab3h)
+    theta1 = self.theta_rad1 - m.atan(40 / self.ab2h_ab3h)
+    theta2 = self.theta_rad1 - m.atan(40 / (self.ab2h_ab3h - self.arm_block4_height))
+    theta3 = self.theta_rad1 - m.atan((40 + self.arm_block4_width) / (self.ab2h_ab3h - self.arm_block4_height))
+    self.win.coords(self.arm_block4, self.get_new_coords(self.scx1, self.scy1, [l0, l1, l2, l3], [theta0, theta1, theta2, theta3]))
     
   def command_servo2(self, theta):
     theta_rad = self.theta_rad1 + m.radians(theta) - m.pi/2
