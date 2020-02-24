@@ -56,9 +56,17 @@ class CommandWindow(tk.Frame):
   def go_to_target(self):
     x = int(self.var_theta1.get())
     y = int(self.var_theta2.get())
+
     theta1, theta2 = self.robot_win.compute_thetas(x, y)
+
     self.robot_win.draw_target(x, y)
-    self.smooth_move(theta1, theta2)
+
+    new_x, new_y = self.robot_win.compute_xy_eff(theta1, theta2)
+
+    if abs(new_x - x) < 5 and abs(new_y - y) < 5:
+      self.smooth_move(theta1, theta2)
+    else:
+      print('Unreachable target!')
   
   def smooth_move(self, theta1, theta2):
     theta1_start = self.robot_win.servo1_theta
@@ -124,6 +132,9 @@ class RobotSimulation(tk.Frame):
     self.mgi_arm2 = self.arm_block2_height
     self.mgi_arm3 = 30
     self.mgi_arm4 = self.arm_block4_width + 40
+
+    self.ab3_ab4_theta = m.atan(self.mgi_arm4/self.mgi_arm3)
+    self.scx2_xf = m.sqrt(m.pow(self.mgi_arm3, 2) + m.pow(self.mgi_arm4, 2))
   
   def create_robot(self):
     self.char_width, self.char_height = 220, 55
@@ -236,22 +247,32 @@ class RobotSimulation(tk.Frame):
     self.win.coords(self.arm_block4, self.get_new_coords(self.scx2, self.scy2, [l0, l1, l2, l3], [theta0, theta1, theta2, theta3]))
   
   def compute_thetas(self, x, y, elbow='down'):
-    theta = m.atan(self.mgi_arm4/self.mgi_arm3)
-    u = m.sqrt(m.pow(self.mgi_arm3, 2) + m.pow(self.mgi_arm4, 2))
+    eps_arg = (m.pow(x-self.mgi_arm1, 2) + m.pow(y, 2) - m.pow(self.mgi_arm2, 2) - m.pow(self.scx2_xf, 2)) / (2*self.mgi_arm2*self.scx2_xf)
 
-    epsilon = m.acos((m.pow(x-self.mgi_arm1, 2) + m.pow(y, 2) - m.pow(self.mgi_arm2, 2) - m.pow(u, 2)) / (2*self.mgi_arm2*u))
+    if eps_arg < -1 or eps_arg > 1:
+      print('Arccos Domain Error.')
+      return self.servo1_theta, self.servo2_theta
+
+    epsilon = m.acos(eps_arg)
     
     epsilon = -epsilon if elbow == 'up' else epsilon
 
-    k1 = self.mgi_arm2 + u*m.cos(epsilon)
-    k2 = u*m.sin(epsilon)
+    k1 = self.mgi_arm2 + self.scx2_xf*m.cos(epsilon)
+    k2 = self.scx2_xf*m.sin(epsilon)
 
     alpha = m.atan((k1*y - k2*(x - self.mgi_arm1)) / (k1*(x - self.mgi_arm1) + k2*y))
 
     alpha = m.pi/2 - alpha
-    beta = theta - epsilon
+    beta = self.ab3_ab4_theta - epsilon
 
     return int(round(m.degrees(alpha))), int(round(m.degrees(beta))) + 90
+  
+  def compute_xy_eff(self, theta1, theta2):
+    theta1, theta2 = m.pi/2 - m.radians(theta1), m.pi/2 - m.radians(theta2)
+    x = self.char_height + self.arm_block1_height + self.arm_block2_height * m.cos(theta1)
+    x += self.scx2_xf * m.cos(theta1 + theta2 + self.ab3_ab4_theta)
+    y = self.arm_block2_height * m.sin(theta1) + self.scx2_xf * m.sin(theta1 + theta2 + self.ab3_ab4_theta)
+    return x, y
   
   def draw_target(self, x, y, size=10):
     new_x = self.scx0 - y
