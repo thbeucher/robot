@@ -73,8 +73,8 @@ class ReplayMemory(object):
 class Trainer(object):
     def __init__(self, config):
         base_config = {'batch_size': 128, 'gamma': 0.999, 'eps_start': 0.9, 'eps_end': 0.05, 'eps_decay': 200,
-                       'target_update': 10, 'memory_size': 10000, 'n_episodes': 50, 'max_iter_ep': 500,
-                       'model_path': 'arm_dqn_model.pt', 'n_eval_ep': 10}
+                       'target_update': 10, 'memory_size': 10000, 'n_episodes': 300, 'max_iter_ep': 500,
+                       'model_path': 'arm_dqn_model.pt', 'n_eval_ep': 10, 'lr': 1e-6}
         self.config = {**base_config, **config}
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -83,7 +83,7 @@ class Trainer(object):
         self.instanciate_model()
 
         self.steps_done = 0
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=1e-5)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=self.config['lr'])
         self.criterion = nn.SmoothL1Loss()
     
     def instanciate_params(self):
@@ -209,8 +209,6 @@ class Trainer(object):
             if i_episode % self.config['target_update'] == 0:
                 self.target_net.load_state_dict(self.policy_net.state_dict())
 
-        self.env.close()
-
         self.save_model()
     
     @torch.no_grad()
@@ -261,3 +259,5 @@ if __name__ == "__main__":
     rep = input('Eval network? (y or n): ')
     if rep == 'y':
         trainer.evaluation()
+    
+    trainer.env.close()
