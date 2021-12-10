@@ -29,16 +29,22 @@ class RobotArmEnvV0(gym.Env):
                    8: 'DEC_J1_INC_J2'}
     self.action_space = spaces.Discrete(len(self.action))
   
-  def render(self, mode='human', draw_target=True):
+  def render(self, mode='human', draw_target=True, to_draw=None):
     if self.viewer == None:
       pygame.init()
       pygame.display.set_caption('RobotArm-Env')
       self.screen = pygame.display.set_mode(self.config['window_size'])
       self.clock = pygame.time.Clock()
-      self.viewer = 'HUMAN'
+      self.viewer = mode
+
     self.screen.fill(self.config['screen_color'])
+
     if draw_target:
       self.draw_target()
+    
+    if to_draw is not None:
+      self.screen.blit(to_draw, (0, 0))
+
     self.draw_arm(self.joints_angle)
     self.clock.tick(self.config['clock_tick'])
     pygame.display.flip()
@@ -63,6 +69,7 @@ class RobotArmEnvV0(gym.Env):
     link_size = self.config['link_size']
     joint2_angle = m.acos(np.clip((x**2 + y**2 - 2 * link_size**2) / (2 * link_size**2), -1, 1))
     joint1_angle = m.atan2(y, x+1e-9) - m.atan2(link_size * m.sin(joint2_angle), link_size + link_size * m.cos(joint2_angle))
+
     joint1_angle = np.clip(m.degrees(joint1_angle), self.config['min_angle'], self.config['max_angle_joint1'])
     joint2_angle = np.clip(m.degrees(joint2_angle), self.config['min_angle'], self.config['max_angle_joint2'])
 

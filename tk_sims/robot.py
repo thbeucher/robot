@@ -44,6 +44,7 @@ class CommandWindow(tk.Frame):
   
   def get_image(self):
     # save canvas to .eps (postscript) file
+    # colormode: gray = niveau de gris | mono = noir et blanc | color
     self.robot_win.win.postscript(file="tmp_canvas.eps", colormode="color",
                                   width=self.robot_win.width, height=self.robot_win.height,
                                   pagewidth=self.robot_win.width-1, pageheight=self.robot_win.height-1)
