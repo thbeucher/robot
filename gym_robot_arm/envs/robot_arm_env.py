@@ -12,7 +12,7 @@ class RobotArmEnvV0(gym.Env):
   def __init__(self):
     self.config = {'viewer': None, 'window_size': [400, 400], 'screen_color': (255, 255, 255),
                    'target_color': (255, 0, 0), 'min_angle': 0, 'max_angle_joint1': 90, 'link_size': 75,
-                   'arm_ori': (200, 300), 'rate': 1, 'clock_tick': 60, 'max_angle_joint2': 180}
+                   'arm_ori': (200, 300), 'rate': 5, 'clock_tick': 60, 'max_angle_joint2': 180}
     self.viewer = self.config['viewer']
 
     self.target_pos = self.get_random_pos()
@@ -28,14 +28,19 @@ class RobotArmEnvV0(gym.Env):
                    7: 'INC_J1_DEC_J2',
                    8: 'DEC_J1_INC_J2'}
     self.action_space = spaces.Discrete(len(self.action))
+
+    pygame.init()
   
   def render(self, mode='human', draw_target=True, to_draw=None):
     if self.viewer == None:
-      pygame.init()
-      pygame.display.set_caption('RobotArm-Env')
-      self.screen = pygame.display.set_mode(self.config['window_size'])
-      self.clock = pygame.time.Clock()
       self.viewer = mode
+
+      if mode == 'human':
+        pygame.display.set_caption('RobotArm-Env')
+        self.screen = pygame.display.set_mode(self.config['window_size'])
+        self.clock = pygame.time.Clock()
+      else:
+        self.screen = pygame.Surface(self.config['window_size'])
 
     self.screen.fill(self.config['screen_color'])
 
@@ -46,8 +51,10 @@ class RobotArmEnvV0(gym.Env):
       self.screen.blit(to_draw, (0, 0))
 
     self.draw_arm(self.joints_angle)
-    self.clock.tick(self.config['clock_tick'])
-    pygame.display.flip()
+
+    if mode == 'human':
+      self.clock.tick(self.config['clock_tick'])
+      pygame.display.flip()
   
   def get_random_angles(self):
     joint1_angle = random.uniform(self.config['min_angle'], self.config['max_angle_joint1'])
