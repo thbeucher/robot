@@ -180,7 +180,7 @@ class RobotArmEnvV1(gym.Env):
   def __init__(self):
     self.config = {'window_size': [400, 400], 'screen_color': (255, 255, 255), 'rate': 5, 'clock_tick': 120,
                    'target_color': (255, 0, 0), 'min_angle': 0, 'max_angle_joint1': 90, 'link_size': 75,
-                   'arm_ori': (200, 300), 'max_angle_joint2': 180, 'only_background': False}
+                   'arm_ori': (200, 300), 'max_angle_joint2': 180, 'in_background': False}
 
     self.screen = None
     self.clock = None
@@ -279,7 +279,7 @@ class RobotArmEnvV1(gym.Env):
 
   def render(self, mode='human'):
     if self.screen is None:
-      if self.config['only_background']:
+      if self.config['in_background']:
         self.screen = pygame.Surface(self.config['window_size'])
       else:
         pygame.init()
