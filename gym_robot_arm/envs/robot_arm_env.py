@@ -241,11 +241,11 @@ class RobotArmEnvV1(gym.Env):
     return pygame.surfarray.array3d(self.screen).swapaxes(0, 1)
 
   def reset(self, to_reset='both'):  # both|target|arm
-    if to_reset in ['target', 'both']:
-      self.target_pos = self._get_random_target_position()
-
     if to_reset in ['arm', 'both']:
       self.joints_angle = self._get_random_joint_angles()
+      
+    if to_reset in ['target', 'both']:
+      self.target_pos = self._get_random_target_position()
 
   def step(self, action):
     _, _, x_eff, y_eff = forward_kinematics(self.joints_angle, self.config['arm_ori'], self.config['link_size'])
