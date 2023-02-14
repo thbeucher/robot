@@ -15,8 +15,8 @@ if __name__ == "__main__":
 
   while not done:
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            done = True
+      if event.type == pygame.QUIT:
+        done = True
     
     mouse_state = pygame.mouse.get_pressed()[0]
     mouse_x = pygame.mouse.get_pos()[0]

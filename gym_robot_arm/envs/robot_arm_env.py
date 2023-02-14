@@ -238,14 +238,22 @@ class RobotArmEnvV1(gym.Env):
     gfxdraw.filled_circle(self.surf, self.target_pos[0], self.target_pos[1], 10, self.config['target_color'])
   
   def get_screen(self):
-    return pygame.surfarray.array3d(self.screen).swapaxes(0, 1)
+    return pygame.surfarray.array3d(self.screen).swapaxes(0, 1)  # 400x400x3
+  
+  def is_target_reached(self, joints_angle):
+    _, _, x_eff, y_eff = forward_kinematics(joints_angle, self.config['arm_ori'], self.config['link_size'])
+    current_dist = euclidean(self.target_pos, (x_eff, y_eff))
+    return current_dist < 10
 
-  def reset(self, to_reset='both'):  # both|target|arm
+  def reset(self, to_reset='both', target_pos=None):  # both|target|arm
     if to_reset in ['arm', 'both']:
       self.joints_angle = self._get_random_joint_angles()
-      
+
     if to_reset in ['target', 'both']:
-      self.target_pos = self._get_random_target_position()
+      self.target_pos = self._get_random_target_position() if target_pos is None else target_pos
+    
+    _, _, x_eff, y_eff = forward_kinematics(self.joints_angle, self.config['arm_ori'], self.config['link_size'])
+    self.current_dist = euclidean(self.target_pos, (x_eff, y_eff))
 
   def step(self, action):
     _, _, x_eff, y_eff = forward_kinematics(self.joints_angle, self.config['arm_ori'], self.config['link_size'])
@@ -273,8 +281,8 @@ class RobotArmEnvV1(gym.Env):
     if current_dist < 10:
       reward = 10
       done = True
-    elif current_dist < prev_dist:
-      reward = 1
+    # elif current_dist < prev_dist:
+    #   reward = 0.1
     
     # observation, reward, done, info
     return self.joints_angle, reward, done, None
