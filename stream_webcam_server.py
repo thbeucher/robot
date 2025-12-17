@@ -5,6 +5,7 @@ import imagezmq
 
 def start_server():
   imageHub = imagezmq.ImageHub()
+  print(imageHub.zmq_socket.LAST_ENDPOINT.decode())
 
   while True:
     rpiName, frame = imageHub.recv_image()
