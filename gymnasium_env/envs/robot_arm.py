@@ -4,10 +4,11 @@ import random
 import numpy as np
 import gymnasium as gym
 
-from gymnasium import spaces
+from PIL import Image
 from pygame import gfxdraw
-from scipy.spatial.distance import euclidean
+from gymnasium import spaces
 from typing import Tuple, Optional
+from scipy.spatial.distance import euclidean
 
 
 def forward_kinematics(joints_angle: Tuple[float, float], arm_ori: Tuple[int, int], link_size: int, to_int: bool = False):
@@ -38,9 +39,20 @@ class RobotArmEnv(gym.Env):
         self.clock = None
         self.joints_angle = self._get_random_joint_angles()
         self.target_pos = self._get_random_target_position()
-    
-    def get_screen(self):
-        return pygame.surfarray.array3d(self.screen).swapaxes(0, 1)  # 400x400x3
+
+        self.crop_box = [109, 365, 89, 345]  # [x1, x2, y1, y2]
+
+    def get_screen(self, crop=False, to_pil=False):
+        img = pygame.surfarray.array3d(self.screen).swapaxes(0, 1)  # 400x400x3
+        if crop:
+            x1, x2, y1, y2 = self.crop_box
+            img = img[x1:x2, y1:y2, :]  # resize to 256*256*3
+        if to_pil:
+            img = Image.fromarray(img)  # convert to PIL
+        # Example to resize PIL image using torchvision
+        # resize = transforms.Resize((s, s), interpolation=transforms.InterpolationMode.BILINEAR)
+        # out_img = resize(pil_img)
+        return img
     
     def _get_random_joint_angles(self) -> Tuple[float, float]:
         return [random.uniform(self.config['min_angle'], self.config['max_angle_joint1']),
