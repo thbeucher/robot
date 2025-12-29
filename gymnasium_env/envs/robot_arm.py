@@ -97,8 +97,15 @@ class RobotArmEnv(gym.Env):
             return pygame.surfarray.array3d(self.screen).swapaxes(0, 1)
     
     def _rotate_link(self, xy_start, xy_end, joint_angle, lw=5):  # lw = link_width
-        return [(xo + r * math.sin(joint_angle), yo + r * math.cos(joint_angle))\
-                for (xo, yo), r in zip([xy_start, xy_start, xy_end, xy_end], [-lw, lw, lw, -lw])]
+        points = [
+            (xo + r * math.sin(joint_angle), yo + r * math.cos(joint_angle))
+            for (xo, yo), r in zip(
+                [xy_start, xy_start, xy_end, xy_end],
+                [-lw, lw, lw, -lw]
+            )
+        ]
+        # gfxdraw truncat float so perform rouding here to get consistent behavior
+        return [(int(round(x)), int(round(y))) for x, y in points]
         
     def _draw(self):
         self.screen.fill(self.config['screen_color'])
@@ -115,9 +122,11 @@ class RobotArmEnv(gym.Env):
 
         new_coords = self._rotate_link(self.config['arm_ori'], (x_joint2, y_joint2), math.radians(self.joints_angle[0]))
         gfxdraw.filled_polygon(self.screen, new_coords, (0, 0, 0))  # Draw arm
+        gfxdraw.aapolygon(self.screen, new_coords, (0, 0, 0))  # anti-aliased outlines
 
         new_coords = self._rotate_link((x_joint2, y_joint2), (x_eff, y_eff), math.radians(sum(self.joints_angle)))
         gfxdraw.filled_polygon(self.screen, new_coords, (0, 0, 0))  # Draw forearm
+        gfxdraw.aapolygon(self.screen, new_coords, (0, 0, 0))  # anti-aliased outlines
     
     def _draw_target(self):
         gfxdraw.filled_circle(self.screen, self.target_pos[0], self.target_pos[1], 10, self.config['target_color'])
