@@ -22,7 +22,7 @@ def forward_kinematics(joints_angle: Tuple[float, float], arm_ori: Tuple[int, in
 class RobotArmEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 30}
     
-    def __init__(self, render_mode: Optional[str] = None):
+    def __init__(self, render_mode: Optional[str] = None, cropping=False):
         self.config = {
             'window_size': (400, 400), 'screen_color': (255, 255, 255), 'rate': 5,
             'clock_tick': 120, 'target_color': (255, 0, 0), 'min_angle': 0,
@@ -32,7 +32,7 @@ class RobotArmEnv(gym.Env):
 
         self.action_mapping = {0: 'HOLD', 1: 'INC_J1', 2: 'DEC_J1', 3: 'INC_J2', 4: 'DEC_J2'}
         self.action_space = spaces.Discrete(len(self.action_mapping))
-        self.observation_space = spaces.Box(low=0, high=180, shape=(2,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0, high=180, shape=(2,), dtype=int)
         
         self.render_mode = render_mode
         self.screen = None
@@ -41,6 +41,7 @@ class RobotArmEnv(gym.Env):
         self.target_pos = self._get_random_target_position()
 
         self.crop_box = [109, 365, 89, 345]  # [x1, x2, y1, y2]
+        self.cropping = cropping
 
     def get_screen(self, crop=False, to_pil=False):
         img = pygame.surfarray.array3d(self.screen).swapaxes(0, 1)  # 400x400x3
@@ -49,9 +50,6 @@ class RobotArmEnv(gym.Env):
             img = img[x1:x2, y1:y2, :]  # resize to 256*256*3
         if to_pil:
             img = Image.fromarray(img)  # convert to PIL
-        # Example to resize PIL image using torchvision
-        # resize = transforms.Resize((s, s), interpolation=transforms.InterpolationMode.BILINEAR)
-        # out_img = resize(pil_img)
         return img
     
     def _get_random_joint_angles(self) -> Tuple[float, float]:
@@ -67,7 +65,8 @@ class RobotArmEnv(gym.Env):
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
-        self.joints_angle = self._get_random_joint_angles()
+        if options and not options.get('only_target', False):
+            self.joints_angle = self._get_random_joint_angles()
         self.target_pos = self._get_random_target_position()
         return np.array(self.joints_angle, dtype=np.float32), {}
     
@@ -91,22 +90,21 @@ class RobotArmEnv(gym.Env):
         done = current_dist < 10
         reward = 10 if done else -current_dist / 100  # Encouraging getting closer
         
-        return np.array(self.joints_angle, dtype=np.float32), reward, done, False, {}
+        return np.array(self.joints_angle, dtype=np.uint8), reward, done, False, {}
 
     def render(self):
         if self.screen is None:
             pygame.init()
             pygame.display.init()
-            self.screen = pygame.display.set_mode(self.config['window_size'])
+            self.screen = pygame.display.set_mode(self.config['window_size'])  # High-res screen for human rendering
             self.clock = pygame.time.Clock()
             
+        self._draw()
         if self.render_mode == "human":
-            self._draw()
             pygame.display.flip()
             self.clock.tick(self.config["clock_tick"])
-        elif self.render_mode == "rgb_array":
-            self._draw()
-            return pygame.surfarray.array3d(self.screen).swapaxes(0, 1)
+
+        return self.get_screen(crop=self.cropping)
     
     def _rotate_link(self, xy_start, xy_end, joint_angle, lw=5):  # lw = link_width
         points = [
