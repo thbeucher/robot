@@ -70,6 +70,30 @@ class RobotArmEnv(gym.Env):
         self.target_pos = self._get_random_target_position()
         return np.array(self.joints_angle, dtype=np.float32), {}
     
+    def get_best_action(self):
+        arm_ori, link_size = self.config['arm_ori'], self.config['link_size']
+        _, _, x_eff, y_eff = forward_kinematics(self.joints_angle, arm_ori, link_size)
+        current_dist = euclidean(self.target_pos, (x_eff, y_eff))
+
+        for action in self.action_mapping:
+            ja1, ja2 = self.joints_angle
+
+            if action == 1 and ja1 < self.config['max_angle_joint1']:
+                ja1 += self.config['rate']
+            elif action == 2 and ja1 > self.config['min_angle']:
+                ja1 -= self.config['rate']
+            elif action == 3 and ja2 < self.config['max_angle_joint2']:
+                ja2 += self.config['rate']
+            elif action == 4 and ja2 > self.config['min_angle']:
+                ja2 -= self.config['rate']
+
+            _, _, x_eff, y_eff = forward_kinematics([ja1, ja2], arm_ori, link_size)
+            dist = euclidean(self.target_pos, (x_eff, y_eff))
+
+            if dist < current_dist:
+                return action
+        return random.randint(1, 4)
+    
     def step(self, action: int):
         if action == 1:
             self.joints_angle[0] += self.config['rate']
@@ -87,7 +111,7 @@ class RobotArmEnv(gym.Env):
         
         _, _, x_eff, y_eff = forward_kinematics(self.joints_angle, self.config['arm_ori'], self.config['link_size'])
         current_dist = euclidean(self.target_pos, (x_eff, y_eff))
-        done = current_dist < 10
+        done = int(current_dist) <= 15
         reward = 10 if done else -current_dist / 100  # Encouraging getting closer
         
         return np.array(self.joints_angle, dtype=np.uint8), reward, done, False, {}
