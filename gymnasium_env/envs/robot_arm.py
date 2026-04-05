@@ -27,7 +27,7 @@ class RobotArmEnv(gym.Env):
             'window_size': (400, 400), 'screen_color': (255, 255, 255), 'rate': 5,
             'clock_tick': 120, 'target_color': (255, 0, 0), 'min_angle': 0,
             'max_angle_joint1': 90, 'link_size': 75, 'arm_ori': (200, 300),
-            'max_angle_joint2': 180
+            'max_angle_joint2': 180, 'hand_color': (0, 0, 255)
         }
 
         self.action_mapping = {0: 'HOLD', 1: 'INC_J1', 2: 'DEC_J1', 3: 'INC_J2', 4: 'DEC_J2'}
@@ -152,7 +152,6 @@ class RobotArmEnv(gym.Env):
 
         gfxdraw.filled_circle(self.screen, x_ori, y_ori, 10, (0, 0, 0))  # Draw shoulder
         gfxdraw.filled_circle(self.screen, x_joint2, y_joint2, 10, (0, 0, 0))  # Draw elbow
-        gfxdraw.filled_circle(self.screen, x_eff, y_eff, 10, (0, 0, 255))  # Draw hand
 
         new_coords = self._rotate_link(self.config['arm_ori'], (x_joint2, y_joint2), math.radians(self.joints_angle[0]))
         gfxdraw.filled_polygon(self.screen, new_coords, (0, 0, 0))  # Draw arm
@@ -161,6 +160,8 @@ class RobotArmEnv(gym.Env):
         new_coords = self._rotate_link((x_joint2, y_joint2), (x_eff, y_eff), math.radians(sum(self.joints_angle)))
         gfxdraw.filled_polygon(self.screen, new_coords, (0, 0, 0))  # Draw forearm
         gfxdraw.aapolygon(self.screen, new_coords, (0, 0, 0))  # anti-aliased outlines
+        
+        gfxdraw.filled_circle(self.screen, x_eff, y_eff, 10, self.config['hand_color'])  # Draw hand
     
     def _draw_target(self):
         gfxdraw.filled_circle(self.screen, self.target_pos[0], self.target_pos[1], 10, self.config['target_color'])
